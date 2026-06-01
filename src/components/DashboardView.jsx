@@ -138,18 +138,30 @@ export default function DashboardView({ transactions, accounts, onAddAccountClic
   const currentMonthTx = transactions.filter(t => {
     const tDate = new Date(t.date);
     const matchesMonth = tDate.getFullYear() === year && tDate.getMonth() === month;
-    const matchesAccount = selectedAccountId === 'all' || t.accountId === selectedAccountId;
+    const matchesAccount = selectedAccountId === 'all' || t.accountId === selectedAccountId || t.toAccountId === selectedAccountId;
     return matchesMonth && matchesAccount;
   });
 
-  // Balances should always reflect real-world current money (all transactions)
+  // Balances should reflect the cumulative balance up to the selected month
   const accountBalances = accounts.map(acc => {
-    const accTx = transactions.filter(t => t.accountId === acc.id);
-    const income = accTx.filter(t => t.type === 'income').reduce((s, t) => s + Number(t.amount), 0);
-    const expense = accTx.filter(t => t.type === 'expense').reduce((s, t) => s + Number(t.amount), 0);
+    // Filter transactions up to the end of the selected month
+    const accTx = transactions.filter(t => (t.accountId === acc.id || t.toAccountId === acc.id) && new Date(t.date) <= endLimit);
+    const balanceChange = accTx.reduce((sum, t) => {
+      if (t.type === 'income') {
+        return t.accountId === acc.id ? sum + Number(t.amount) : sum;
+      } else if (t.type === 'expense') {
+        return t.accountId === acc.id ? sum - Number(t.amount) : sum;
+      } else if (t.type === 'transfer') {
+        if (t.accountId === acc.id) return sum - Number(t.amount);
+        if (t.toAccountId === acc.id) return sum + Number(t.amount);
+      } else if (t.type === 'adjustment' && t.accountId === acc.id) {
+        return sum + Number(t.amount);
+      }
+      return sum;
+    }, 0);
     return {
       ...acc,
-      balance: Number(acc.initialBalance || 0) + income - expense
+      balance: Number(acc.initialBalance || 0) + balanceChange
     };
   });
   const totalBalance = accountBalances.reduce((s, a) => s + a.balance, 0);

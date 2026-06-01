@@ -8,13 +8,15 @@ export function AddTransactionModal({ open, onClose, accounts, onAddTransaction 
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('makan & minum');
   const [accountId, setAccountId] = useState('');
+  const [toAccountId, setToAccountId] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const categories = Object.keys(CATEGORY_ICONS).filter(c => c !== 'Income');
+  const categories = Object.keys(CATEGORY_ICONS).filter(c => c !== 'Income' && c !== 'Transfer');
 
   useEffect(() => {
     if (open) {
       setAccountId(accounts[0]?.id || '');
+      setToAccountId(accounts.length > 1 ? accounts[1].id : (accounts[0]?.id || ''));
     }
   }, [open, accounts]);
 
@@ -26,14 +28,19 @@ export function AddTransactionModal({ open, onClose, accounts, onAddTransaction 
       alert('Please fill out all fields correctly.');
       return;
     }
+    if (type === 'transfer' && accountId === toAccountId) {
+      alert('Cannot transfer to the same account.');
+      return;
+    }
 
     const newTransaction = {
       id: Date.now().toString(),
       title: title.trim(),
       amount: Number(amount),
       type,
-      category: type === 'income' ? 'Income' : category,
+      category: type === 'income' ? 'Income' : (type === 'transfer' ? 'Transfer' : category),
       accountId,
+      toAccountId: type === 'transfer' ? toAccountId : undefined,
       date
     };
 
@@ -70,13 +77,21 @@ export function AddTransactionModal({ open, onClose, accounts, onAddTransaction 
             >
               📉 Expense
             </button>
+            <button
+              type="button"
+              className={`new-type-btn ${type === 'transfer' ? 'active-transfer' : ''}`}
+              onClick={() => { setType('transfer'); setCategory('Transfer'); }}
+              style={type === 'transfer' ? { backgroundColor: 'var(--color-primary)', color: 'white', borderColor: 'var(--color-primary)' } : {}}
+            >
+              🔄 Transfer
+            </button>
           </div>
 
           <div className="new-form-group">
             <label>Note / Title</label>
             <input
               type="text"
-              placeholder="e.g., Groceries, Salary"
+              placeholder="e.g., Groceries, Salary, To Savings"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
@@ -106,7 +121,7 @@ export function AddTransactionModal({ open, onClose, accounts, onAddTransaction 
           </div>
 
           <div className="new-form-group">
-            <label>Account</label>
+            <label>{type === 'transfer' ? 'From Account' : 'Account'}</label>
             {accounts.length === 0 ? (
               <div className="new-form-error">⚠️ Please add an account first.</div>
             ) : (
@@ -117,6 +132,21 @@ export function AddTransactionModal({ open, onClose, accounts, onAddTransaction 
               </select>
             )}
           </div>
+
+          {type === 'transfer' && (
+            <div className="new-form-group">
+              <label>To Account</label>
+              {accounts.length < 2 ? (
+                <div className="new-form-error">⚠️ Please add at least 2 accounts to transfer.</div>
+              ) : (
+                <select value={toAccountId} onChange={(e) => setToAccountId(e.target.value)}>
+                  {accounts.map(acc => (
+                    <option key={acc.id} value={acc.id}>{acc.name} ({acc.type})</option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
 
           {type === 'expense' && (
             <div className="new-form-group">
@@ -133,7 +163,7 @@ export function AddTransactionModal({ open, onClose, accounts, onAddTransaction 
 
           <div className="new-modal-actions">
             <button type="button" onClick={onClose} className="new-btn-cancel">Cancel</button>
-            <button type="submit" disabled={accounts.length === 0} className="new-btn-submit">Save</button>
+            <button type="submit" disabled={accounts.length === 0 || (type === 'transfer' && accounts.length < 2)} className="new-btn-submit">Save</button>
           </div>
         </form>
       </div>

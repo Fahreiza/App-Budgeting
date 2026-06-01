@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const AccountsView = ({ transactions, accounts, onAddAccount }) => {
+const AccountsView = ({ transactions, accounts, onAddAccount, onAddTransaction }) => {
   const [name, setName] = useState('');
   const [type, setType] = useState('bank'); // 'bank', 'e-wallet', 'cash'
   const [color, setColor] = useState('#3b82f6');
@@ -27,6 +27,38 @@ const AccountsView = ({ transactions, accounts, onAddAccount }) => {
       maximumFractionDigits: 0
     }).format(Math.abs(num));
     return num < 0 ? `-Rp${formatted}` : `Rp${formatted}`;
+  };
+
+  const handleAdjustBalance = (accountId, currentBalance) => {
+    const input = prompt('Masukkan saldo riil Anda saat ini untuk rekening ini:');
+    if (input === null || input.trim() === '') return;
+    
+    const actualBalance = Number(input);
+    if (isNaN(actualBalance)) {
+      alert('Mohon masukkan angka yang valid!');
+      return;
+    }
+    
+    const delta = actualBalance - currentBalance;
+    if (delta === 0) {
+      alert('Saldo riil sama dengan saldo sistem. Tidak ada penyesuaian.');
+      return;
+    }
+    
+    if (confirm(`Sistem akan membuat transaksi Penyesuaian Saldo sebesar ${formatIDR(delta)}. Lanjutkan?`)) {
+      const newTransaction = {
+        id: Date.now().toString(),
+        title: 'Penyesuaian Sistem',
+        amount: delta,
+        type: 'adjustment',
+        category: 'Lain-lain',
+        accountId,
+        date: new Date().toISOString().split('T')[0]
+      };
+      if (onAddTransaction) {
+        onAddTransaction(newTransaction);
+      }
+    }
   };
 
   const handleSubmit = (e) => {
@@ -63,9 +95,19 @@ const AccountsView = ({ transactions, accounts, onAddAccount }) => {
 
   // Calculate dynamic balances
   const accountBalances = accounts.map(acc => {
-    const accTransactions = transactions.filter(t => t.accountId === acc.id);
+    const accTransactions = transactions.filter(t => t.accountId === acc.id || t.toAccountId === acc.id);
     const balanceChange = accTransactions.reduce((sum, t) => {
-      return t.type === 'income' ? sum + Number(t.amount) : sum - Number(t.amount);
+      if (t.type === 'income') {
+        return t.accountId === acc.id ? sum + Number(t.amount) : sum;
+      } else if (t.type === 'expense') {
+        return t.accountId === acc.id ? sum - Number(t.amount) : sum;
+      } else if (t.type === 'transfer') {
+        if (t.accountId === acc.id) return sum - Number(t.amount);
+        if (t.toAccountId === acc.id) return sum + Number(t.amount);
+      } else if (t.type === 'adjustment' && t.accountId === acc.id) {
+        return sum + Number(t.amount);
+      }
+      return sum;
     }, 0);
     return {
       ...acc,
@@ -103,9 +145,17 @@ const AccountsView = ({ transactions, accounts, onAddAccount }) => {
                   <span className="account-card-name">{acc.name}</span>
                   <span className="account-card-type">{acc.type}</span>
                 </div>
-                <div>
-                  <div style={{ fontSize: '0.75rem', opacity: 0.8 }}>Saldo Saat Ini</div>
-                  <div className="account-card-balance" style={{ fontSize: '1.35rem' }}>
+                <div className="account-card-balance-wrapper">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '0.25rem' }}>
+                    <span className="account-card-balance-label">Current Balance</span>
+                    <span 
+                      style={{ cursor: 'pointer', fontSize: '0.75rem', textDecoration: 'underline', opacity: 0.8 }} 
+                      onClick={() => handleAdjustBalance(acc.id, acc.currentBalance)}
+                    >
+                      Sesuaikan
+                    </span>
+                  </div>
+                  <div className="account-card-balance">
                     {formatIDR(acc.currentBalance)}
                   </div>
                 </div>

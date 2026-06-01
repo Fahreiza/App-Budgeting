@@ -1,23 +1,10 @@
 import React, { useState } from 'react';
 
-// Export Category Colors so other components can use them consistently
-export const CATEGORY_COLORS = {
-  'Makanan': 'hsl(145, 80%, 45%)',      // Emerald Green
-  'Transportasi': 'hsl(195, 85%, 50%)', // Sky Blue
-  'Hiburan': 'hsl(280, 85%, 65%)',      // Purple
-  'Belanja': 'hsl(345, 85%, 58%)',      // Pink / Neon Rose
-  'Tagihan': 'hsl(35, 92%, 50%)',       // Amber
-  'Lain-lain': 'hsl(215, 20%, 55%)'     // Slate Gray
-};
+import { CATEGORY_COLORS as RV_COLORS, CATEGORY_ICONS as RV_ICONS } from './RecordsView';
 
-export const CATEGORY_ICONS = {
-  'Makanan': '🍔',
-  'Transportasi': '🚗',
-  'Hiburan': '🎮',
-  'Belanja': '🛍️',
-  'Tagihan': '💵',
-  'Lain-lain': '📦'
-};
+// Export Category Colors and Icons so other components can use them consistently
+export const CATEGORY_COLORS = RV_COLORS;
+export const CATEGORY_ICONS = RV_ICONS;
 
 const CustomChart = ({ transactions }) => {
   const [activeCategory, setActiveCategory] = useState(null);

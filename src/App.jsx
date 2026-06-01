@@ -5,6 +5,7 @@ import AccountsView from './components/AccountsView';
 import RecordsView from './components/RecordsView';
 import AnalyticsView from './components/AnalyticsView';
 import ImportView from './components/ImportView';
+import BudgetTracker from './components/BudgetTracker';
 
 // Initial Mock Accounts template with zero balances
 const INITIAL_ACCOUNTS = [
@@ -44,6 +45,14 @@ function App() {
     return INITIAL_TRANSACTIONS;
   });
 
+  const [budgets, setBudgets] = useState(() => {
+    const localBudgets = localStorage.getItem('financely_v9_budgets');
+    if (localBudgets) {
+      return JSON.parse(localBudgets);
+    }
+    return {};
+  });
+
   // Sync Accounts with LocalStorage
   useEffect(() => {
     localStorage.setItem('financely_v9_accounts', JSON.stringify(accounts));
@@ -53,6 +62,11 @@ function App() {
   useEffect(() => {
     localStorage.setItem('financely_v9_transactions', JSON.stringify(transactions));
   }, [transactions]);
+
+  // Sync Budgets with LocalStorage
+  useEffect(() => {
+    localStorage.setItem('financely_v9_budgets', JSON.stringify(budgets));
+  }, [budgets]);
 
   // Handle Account Addition
   const handleAddAccount = (newAccount) => {
@@ -76,6 +90,10 @@ function App() {
     setTransactions([...importedTransactions, ...transactions]);
   };
 
+  const handleUpdateBudget = (category, limit) => {
+    setBudgets(prev => ({ ...prev, [category]: limit }));
+  };
+
   // Render View Active Tab
   const renderActiveView = () => {
     switch (currentTab) {
@@ -94,6 +112,7 @@ function App() {
             transactions={transactions}
             accounts={accounts}
             onAddAccount={handleAddAccount}
+            onAddTransaction={handleAddTransaction}
           />
         );
       case 'records':
@@ -114,6 +133,14 @@ function App() {
             transactions={transactions}
             accounts={accounts}
             onTabChange={handleTabChange}
+          />
+        );
+      case 'budgets':
+        return (
+          <BudgetTracker
+            transactions={transactions}
+            budgets={budgets}
+            onUpdateBudget={handleUpdateBudget}
           />
         );
       case 'import':

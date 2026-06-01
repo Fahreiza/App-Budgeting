@@ -6,6 +6,7 @@ const Sidebar = ({ currentTab, onTabChange }) => {
     { id: 'accounts', name: 'Accounts', icon: '💳' },
     { id: 'records', name: 'Records', icon: '📝' },
     { id: 'analytics', name: 'Analytics', icon: '📈' },
+    { id: 'budgets', name: 'Budgets', icon: '🎯' },
     { id: 'import', name: 'Import', icon: '📥' }
   ];
 

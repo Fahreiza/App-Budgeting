@@ -60,6 +60,7 @@ export default function RecordsView({ transactions, accounts, onAddTransaction, 
   const [year, setYear] = useState(initialFilterYear || now.getFullYear());
   const [showModal, setShowModal] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState(initialFilterCategory || 'All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
     if (initialFilterCategory) setCategoryFilter(initialFilterCategory);
@@ -67,12 +68,16 @@ export default function RecordsView({ transactions, accounts, onAddTransaction, 
     if (initialFilterYear) setYear(initialFilterYear);
   }, [initialFilterCategory, initialFilterMonth, initialFilterYear]);
 
-  // Filter local transactions by month/year and category
+  // Filter local transactions by month/year, category, and search query
   const monthTransactions = transactions.filter(t => {
     const tDate = new Date(t.date);
     const isSameMonth = (tDate.getMonth() + 1) === month && tDate.getFullYear() === year;
     const isSameCategory = categoryFilter === 'All' || t.category === categoryFilter;
-    return isSameMonth && isSameCategory;
+    const matchesSearch = !searchQuery || 
+      (t.title && t.title.toLowerCase().includes(searchQuery.toLowerCase())) || 
+      (t.category && t.category.toLowerCase().includes(searchQuery.toLowerCase()));
+      
+    return isSameMonth && isSameCategory && matchesSearch;
   });
 
   const sorted = [...monthTransactions].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
@@ -102,7 +107,23 @@ export default function RecordsView({ transactions, accounts, onAddTransaction, 
           <h1>Records</h1>
           <p>All transactions</p>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <input 
+            type="text" 
+            placeholder="Search..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              padding: '0.5rem 1rem',
+              borderRadius: '0.75rem',
+              border: '1px solid var(--border-color)',
+              backgroundColor: 'var(--bg-card)',
+              fontSize: '0.875rem',
+              color: 'var(--text-primary)',
+              outline: 'none',
+              width: '180px'
+            }}
+          />
           <select 
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value)}
@@ -121,6 +142,7 @@ export default function RecordsView({ transactions, accounts, onAddTransaction, 
             {Object.keys(CATEGORY_ICONS).map(cat => (
               <option key={cat} value={cat}>{cat}</option>
             ))}
+            <option value="Transfer">Transfer</option>
           </select>
           <button onClick={() => setShowModal(true)} className="new-records-add-btn">
             <Plus size={16} />
@@ -138,7 +160,7 @@ export default function RecordsView({ transactions, accounts, onAddTransaction, 
 
       {grouped.length === 0 ? (
         <div className="new-records-empty">
-          <p>No records for {getMonthName(month, year)}.</p>
+          <p>No records found for {getMonthName(month, year)}.</p>
           <button onClick={() => setShowModal(true)}>Add a transaction</button>
         </div>
       ) : (
@@ -158,22 +180,26 @@ export default function RecordsView({ transactions, accounts, onAddTransaction, 
                 <div className="new-date-group-items">
                   {txs.map((tx) => {
                     const acc = accounts.find(a => a.id === tx.accountId);
+                    const toAcc = accounts.find(a => a.id === tx.toAccountId);
                     const accName = acc ? acc.name : tx.accountId;
-                    const catColor = CATEGORY_COLORS[tx.category] || '#94a3b8';
+                    const toAccName = toAcc ? toAcc.name : tx.toAccountId;
+                    const catColor = tx.type === 'transfer' ? '#3b82f6' : (CATEGORY_COLORS[tx.category] || '#94a3b8');
+                    const icon = tx.type === 'transfer' ? '🔄' : (CATEGORY_ICONS[tx.category] || '📦');
+                    
                     return (
                       <div key={tx.id} className="new-record-item">
                         <div className="new-record-icon" style={{ backgroundColor: `${catColor}20`, color: catColor }}>
-                          {CATEGORY_ICONS[tx.category] || '📦'}
+                          {icon}
                         </div>
                         <div className="new-record-info">
                           <p className="new-record-cat">{tx.category}</p>
                           <p className="new-record-note">
-                            {accName}
+                            {tx.type === 'transfer' ? `${accName} → ${toAccName}` : accName}
                             {tx.title ? ` · ${tx.title}` : ""}
                           </p>
                         </div>
-                        <p className={`new-record-amount ${tx.type === "income" ? "text-income" : "text-expense"}`}>
-                          {tx.type === "income" ? "+" : "-"}{formatRp(Number(tx.amount))}
+                        <p className={`new-record-amount ${tx.type === "income" ? "text-income" : (tx.type === "expense" ? "text-expense" : "")}`} style={tx.type === 'transfer' ? {color: '#3b82f6'} : {}}>
+                          {tx.type === "income" ? "+" : (tx.type === "expense" ? "-" : "")}{formatRp(Number(tx.amount))}
                         </p>
                         <button
                           onClick={() => handleDelete(tx.id)}
